@@ -1,14 +1,16 @@
+import { derivedObservableWithCache } from '../utils/utils.js';
+
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 /**
- * @license lucide-react v0.383.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
+ * Works like a derived.
+ * However, if the value is not undefined, it is cached and will not be recomputed anymore.
+ * In that case, the derived will unsubscribe from its dependencies.
+*/
+function derivedConstOnceDefined(owner, fn) {
+    return derivedObservableWithCache(owner, (reader, lastValue) => lastValue ?? fn(reader));
+}
 
-const toKebabCase = (string) => string.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-const mergeClasses = (...classes) => classes.filter((className, index, array) => {
-  return Boolean(className) && array.indexOf(className) === index;
-}).join(" ");
-
-export { mergeClasses, toKebabCase };
-//# sourceMappingURL=utils.js.map
+export { derivedConstOnceDefined };
