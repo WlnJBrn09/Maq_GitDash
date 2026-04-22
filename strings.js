@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
+*  Copyright (c) Microsoft Corporation. All rights reserved.
+*  Licensed under the MIT License. See License.txt in the project root for license information.
+*--------------------------------------------------------------------------------------------*/
 function startsWith(haystack, needle) {
     if (haystack.length < needle.length) {
         return false;
@@ -28,26 +28,40 @@ function endsWith(haystack, needle) {
         return false;
     }
 }
-function repeat(value, count) {
-    let s = '';
-    while (count > 0) {
-        if ((count & 1) === 1) {
-            s += value;
-        }
-        value += value;
-        count = count >>> 1;
+function extendedRegExp(pattern) {
+    let flags = '';
+    if (startsWith(pattern, '(?i)')) {
+        pattern = pattern.substring(4);
+        flags = 'i';
     }
-    return s;
+    try {
+        return new RegExp(pattern, flags + 'u');
+    }
+    catch (e) {
+        // could be an exception due to the 'u ' flag
+        try {
+            return new RegExp(pattern, flags);
+        }
+        catch (e) {
+            // invalid pattern
+            return undefined;
+        }
+    }
 }
-const _a = 'a'.charCodeAt(0);
-const _z = 'z'.charCodeAt(0);
-const _A = 'A'.charCodeAt(0);
-const _Z = 'Z'.charCodeAt(0);
-const _0 = '0'.charCodeAt(0);
-const _9 = '9'.charCodeAt(0);
-function isLetterOrDigit(text, index) {
-    const c = text.charCodeAt(index);
-    return (_a <= c && c <= _z) || (_A <= c && c <= _Z) || (_0 <= c && c <= _9);
+// from https://tanishiking.github.io/posts/count-unicode-codepoint/#work-hard-with-for-statements
+function stringLength(str) {
+    let count = 0;
+    for (let i = 0; i < str.length; i++) {
+        count++;
+        // obtain the i-th 16-bit
+        const code = str.charCodeAt(i);
+        if (0xD800 <= code && code <= 0xDBFF) {
+            // if the i-th 16bit is an upper surrogate
+            // skip the next 16 bits (lower surrogate)
+            i++;
+        }
+    }
+    return count;
 }
 
-export { endsWith, isLetterOrDigit, repeat, startsWith };
+export { endsWith, extendedRegExp, startsWith, stringLength };
