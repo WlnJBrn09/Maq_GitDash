@@ -23,19 +23,22 @@ function findFirst(array, p) {
     }
     return low;
 }
-function includes(array, item) {
-    return array.indexOf(item) !== -1;
-}
-function union(...arrays) {
-    const result = [];
-    for (const array of arrays) {
-        for (const item of array) {
-            if (!includes(result, item)) {
-                result.push(item);
-            }
+function binarySearch(array, key, comparator) {
+    let low = 0, high = array.length - 1;
+    while (low <= high) {
+        const mid = ((low + high) / 2) | 0;
+        const comp = comparator(array[mid], key);
+        if (comp < 0) {
+            low = mid + 1;
+        }
+        else if (comp > 0) {
+            high = mid - 1;
+        }
+        else {
+            return mid;
         }
     }
-    return result;
+    return -(low + 1);
 }
 
-export { findFirst, includes, union };
+export { binarySearch, findFirst };
