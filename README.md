@@ -1,107 +1,50 @@
-<a href="https://marked.js.org">
-  <img width="60px" height="60px" src="https://marked.js.org/img/logo-black.svg" align="right" />
-</a>
+# math-intrinsics <sup>[![Version Badge][npm-version-svg]][package-url]</sup>
 
-# Marked
+[![github actions][actions-image]][actions-url]
+[![coverage][codecov-image]][codecov-url]
+[![License][license-image]][license-url]
+[![Downloads][downloads-image]][downloads-url]
 
-[![npm](https://badgen.net/npm/v/marked)](https://www.npmjs.com/package/marked)
-[![gzip size](https://badgen.net/badgesize/gzip/https://cdn.jsdelivr.net/npm/marked/marked.min.js)](https://cdn.jsdelivr.net/npm/marked/marked.min.js)
-[![install size](https://badgen.net/packagephobia/install/marked)](https://packagephobia.now.sh/result?p=marked)
-[![downloads](https://badgen.net/npm/dt/marked)](https://www.npmjs.com/package/marked)
-[![github actions](https://github.com/markedjs/marked/workflows/Tests/badge.svg)](https://github.com/markedjs/marked/actions)
-[![snyk](https://snyk.io/test/npm/marked/badge.svg)](https://snyk.io/test/npm/marked)
+[![npm badge][npm-badge-png]][package-url]
 
-- ⚡ built for speed
-- ⬇️ low-level compiler for parsing markdown without caching or blocking for long periods of time
-- ⚖️ light-weight while implementing all markdown features from the supported flavors & specifications
-- 🌐 works in a browser, on a server, or from a command line interface (CLI)
+ES Math-related intrinsics and helpers, robustly cached.
 
-## Demo
+ - `abs`
+ - `floor`
+ - `isFinite`
+ - `isInteger`
+ - `isNaN`
+ - `isNegativeZero`
+ - `max`
+ - `min`
+ - `mod`
+ - `pow`
+ - `round`
+ - `sign`
+ - `constants/maxArrayLength`
+ - `constants/maxSafeInteger`
+ - `constants/maxValue`
 
-Checkout the [demo page](https://marked.js.org/demo/) to see marked in action ⛹️
 
-## Docs
+## Tests
+Simply clone the repo, `npm install`, and run `npm test`
 
-Our [documentation pages](https://marked.js.org) are also rendered using marked 💯
+## Security
 
-Also read about:
+Please email [@ljharb](https://github.com/ljharb) or see https://tidelift.com/security if you have a potential security vulnerability to report.
 
-* [Options](https://marked.js.org/using_advanced)
-* [Extensibility](https://marked.js.org/using_pro)
-
-## Compatibility
-
-**Node.js:** Only [current and LTS](https://nodejs.org/en/about/releases/) Node.js versions are supported. End of life Node.js versions may become incompatible with Marked at any point in time.
-
-**Browser:** Not IE11 :)
-
-## Installation
-
-**CLI:**
-
-```sh
-npm install -g marked
-```
-
-**In-browser:**
-
-```sh
-npm install marked
-```
-
-## Usage
-
-### Warning: 🚨 Marked does not [sanitize](https://marked.js.org/using_advanced#options) the output HTML. Please use a sanitize library, like [DOMPurify](https://github.com/cure53/DOMPurify) (recommended), [sanitize-html](https://github.com/apostrophecms/sanitize-html) or [insane](https://github.com/bevacqua/insane) on the *output* HTML! 🚨
-
-```
-DOMPurify.sanitize(marked.parse(`<img src="x" onerror="alert('not happening')">`));
-```
-
-**CLI**
-
-``` bash
-# Example with stdin input
-$ marked -o hello.html
-hello world
-^D
-$ cat hello.html
-<p>hello world</p>
-```
-
-```bash
-# Print all options
-$ marked --help
-```
-
-**Browser**
-
-```html
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Marked in the browser</title>
-</head>
-<body>
-  <div id="content"></div>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    document.getElementById('content').innerHTML =
-      marked.parse('# Marked in the browser\n\nRendered by **marked**.');
-  </script>
-</body>
-</html>
-```
-or import esm module
-
-```html
-<script type="module">
-  import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
-  document.getElementById('content').innerHTML =
-    marked.parse('# Marked in the browser\n\nRendered by **marked**.');
-</script>
-```
-
-## License
-
-Copyright (c) 2011-2022, Christopher Jeffrey. (MIT License)
+[package-url]: https://npmjs.org/package/math-intrinsics
+[npm-version-svg]: https://versionbadg.es/es-shims/math-intrinsics.svg
+[deps-svg]: https://david-dm.org/es-shims/math-intrinsics.svg
+[deps-url]: https://david-dm.org/es-shims/math-intrinsics
+[dev-deps-svg]: https://david-dm.org/es-shims/math-intrinsics/dev-status.svg
+[dev-deps-url]: https://david-dm.org/es-shims/math-intrinsics#info=devDependencies
+[npm-badge-png]: https://nodei.co/npm/math-intrinsics.png?downloads=true&stars=true
+[license-image]: https://img.shields.io/npm/l/math-intrinsics.svg
+[license-url]: LICENSE
+[downloads-image]: https://img.shields.io/npm/dm/es-object.svg
+[downloads-url]: https://npm-stat.com/charts.html?package=math-intrinsics
+[codecov-image]: https://codecov.io/gh/es-shims/math-intrinsics/branch/main/graphs/badge.svg
+[codecov-url]: https://app.codecov.io/gh/es-shims/math-intrinsics/
+[actions-image]: https://img.shields.io/endpoint?url=https://github-actions-badge-u3jn4tfpocch.runkit.sh/es-shims/math-intrinsics
+[actions-url]: https://github.com/es-shims/math-intrinsics/actions
