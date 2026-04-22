@@ -1,6 +1,5 @@
-import { FileType } from '../cssLanguageTypes.js';
-import { startsWith, endsWith } from '../utils/strings.js';
-import { joinPath } from '../utils/resources.js';
+import { FileType } from '../htmlLanguageTypes.js';
+import { startsWith } from '../utils/strings.js';
 import { Range, TextEdit, CompletionItemKind, Position } from '../../../../vscode-languageserver-types/lib/esm/main.js';
 
 /*---------------------------------------------------------------------------------------------
@@ -8,77 +7,45 @@ import { Range, TextEdit, CompletionItemKind, Position } from '../../../../vscod
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 class PathCompletionParticipant {
-    constructor(readDirectory) {
+    constructor(dataManager, readDirectory) {
+        this.dataManager = dataManager;
         this.readDirectory = readDirectory;
-        this.literalCompletions = [];
-        this.importCompletions = [];
+        this.atributeCompletions = [];
     }
-    onCssURILiteralValue(context) {
-        this.literalCompletions.push(context);
-    }
-    onCssImportPath(context) {
-        this.importCompletions.push(context);
+    onHtmlAttributeValue(context) {
+        if (this.dataManager.isPathAttribute(context.tag, context.attribute)) {
+            this.atributeCompletions.push(context);
+        }
     }
     async computeCompletions(document, documentContext) {
         const result = { items: [], isIncomplete: false };
-        for (const literalCompletion of this.literalCompletions) {
-            const uriValue = literalCompletion.uriValue;
-            const fullValue = stripQuotes(uriValue);
-            if (fullValue === '.' || fullValue === '..') {
-                result.isIncomplete = true;
-            }
-            else {
-                const items = await this.providePathSuggestions(uriValue, literalCompletion.position, literalCompletion.range, document, documentContext);
-                for (let item of items) {
-                    result.items.push(item);
+        for (const attributeCompletion of this.atributeCompletions) {
+            const fullValue = stripQuotes(document.getText(attributeCompletion.range));
+            if (isCompletablePath(fullValue)) {
+                if (fullValue === '.' || fullValue === '..') {
+                    result.isIncomplete = true;
                 }
-            }
-        }
-        for (const importCompletion of this.importCompletions) {
-            const pathValue = importCompletion.pathValue;
-            const fullValue = stripQuotes(pathValue);
-            if (fullValue === '.' || fullValue === '..') {
-                result.isIncomplete = true;
-            }
-            else {
-                let suggestions = await this.providePathSuggestions(pathValue, importCompletion.position, importCompletion.range, document, documentContext);
-                if (document.languageId === 'scss') {
-                    suggestions.forEach(s => {
-                        if (startsWith(s.label, '_') && endsWith(s.label, '.scss')) {
-                            if (s.textEdit) {
-                                s.textEdit.newText = s.label.slice(1, -5);
-                            }
-                            else {
-                                s.label = s.label.slice(1, -5);
-                            }
-                        }
-                    });
-                }
-                for (let item of suggestions) {
-                    result.items.push(item);
+                else {
+                    const replaceRange = pathToReplaceRange(attributeCompletion.value, fullValue, attributeCompletion.range);
+                    const suggestions = await this.providePathSuggestions(attributeCompletion.value, replaceRange, document, documentContext);
+                    for (const item of suggestions) {
+                        result.items.push(item);
+                    }
                 }
             }
         }
         return result;
     }
-    async providePathSuggestions(pathValue, position, range, document, documentContext) {
-        const fullValue = stripQuotes(pathValue);
-        const isValueQuoted = startsWith(pathValue, `'`) || startsWith(pathValue, `"`);
-        const valueBeforeCursor = isValueQuoted
-            ? fullValue.slice(0, position.character - (range.start.character + 1))
-            : fullValue.slice(0, position.character - range.start.character);
-        const currentDocUri = document.uri;
-        const fullValueRange = isValueQuoted ? shiftRange(range, 1, -1) : range;
-        const replaceRange = pathToReplaceRange(valueBeforeCursor, fullValue, fullValueRange);
+    async providePathSuggestions(valueBeforeCursor, replaceRange, document, documentContext) {
         const valueBeforeLastSlash = valueBeforeCursor.substring(0, valueBeforeCursor.lastIndexOf('/') + 1); // keep the last slash
-        let parentDir = documentContext.resolveReference(valueBeforeLastSlash || '.', currentDocUri);
+        let parentDir = documentContext.resolveReference(valueBeforeLastSlash || '.', document.uri);
         if (parentDir) {
             try {
                 const result = [];
                 const infos = await this.readDirectory(parentDir);
                 for (const [name, type] of infos) {
                     // Exclude paths that start with `.`
-                    if (name.charCodeAt(0) !== CharCode_dot && (type === FileType.Directory || joinPath(parentDir, name) !== currentDocUri)) {
+                    if (name.charCodeAt(0) !== CharCode_dot) {
                         result.push(createCompletionItem(name, type === FileType.Directory, replaceRange));
                     }
                 }
@@ -100,37 +67,43 @@ function stripQuotes(fullValue) {
         return fullValue;
     }
 }
-function pathToReplaceRange(valueBeforeCursor, fullValue, fullValueRange) {
+function isCompletablePath(value) {
+    if (startsWith(value, 'http') || startsWith(value, 'https') || startsWith(value, '//')) {
+        return false;
+    }
+    return true;
+}
+function pathToReplaceRange(valueBeforeCursor, fullValue, range) {
     let replaceRange;
     const lastIndexOfSlash = valueBeforeCursor.lastIndexOf('/');
     if (lastIndexOfSlash === -1) {
-        replaceRange = fullValueRange;
+        replaceRange = shiftRange(range, 1, -1);
     }
     else {
         // For cases where cursor is in the middle of attribute value, like <script src="./s|rc/test.js">
         // Find the last slash before cursor, and calculate the start of replace range from there
         const valueAfterLastSlash = fullValue.slice(lastIndexOfSlash + 1);
-        const startPos = shiftPosition(fullValueRange.end, -valueAfterLastSlash.length);
-        // If whitespace exists, replace until it
+        const startPos = shiftPosition(range.end, -1 - valueAfterLastSlash.length);
+        // If whitespace exists, replace until there is no more
         const whitespaceIndex = valueAfterLastSlash.indexOf(' ');
         let endPos;
         if (whitespaceIndex !== -1) {
             endPos = shiftPosition(startPos, whitespaceIndex);
         }
         else {
-            endPos = fullValueRange.end;
+            endPos = shiftPosition(range.end, -1);
         }
         replaceRange = Range.create(startPos, endPos);
     }
     return replaceRange;
 }
-function createCompletionItem(name, isDir, replaceRange) {
+function createCompletionItem(p, isDir, replaceRange) {
     if (isDir) {
-        name = name + '/';
+        p = p + '/';
         return {
-            label: escapePath(name),
+            label: p,
             kind: CompletionItemKind.Folder,
-            textEdit: TextEdit.replace(replaceRange, escapePath(name)),
+            textEdit: TextEdit.replace(replaceRange, p),
             command: {
                 title: 'Suggest',
                 command: 'editor.action.triggerSuggest'
@@ -139,15 +112,11 @@ function createCompletionItem(name, isDir, replaceRange) {
     }
     else {
         return {
-            label: escapePath(name),
+            label: p,
             kind: CompletionItemKind.File,
-            textEdit: TextEdit.replace(replaceRange, escapePath(name))
+            textEdit: TextEdit.replace(replaceRange, p)
         };
     }
-}
-// Escape https://www.w3.org/TR/CSS1/#url
-function escapePath(p) {
-    return p.replace(/(\s|\(|\)|,|"|')/g, '\\$1');
 }
 function shiftPosition(pos, offset) {
     return Position.create(pos.line, pos.character + offset);
