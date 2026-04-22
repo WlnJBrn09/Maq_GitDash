@@ -1,42 +1,57 @@
-// src/browser/reader.ts
-function t(...args) {
-  const firstArg = args[0];
-  let key;
-  let message;
-  let formatArgs;
-  if (typeof firstArg === "string") {
-    key = firstArg;
-    message = firstArg;
-    args.splice(0, 1);
-    formatArgs = !args || typeof args[0] !== "object" ? args : args[0];
-  } else if (firstArg instanceof Array) {
-    const replacements = args.slice(1);
-    if (firstArg.length !== replacements.length + 1) {
-      throw new Error("expected a string as the first argument to l10n.t");
+import { mainWindow } from './window.js';
+
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+class WindowManager {
+    constructor() {
+        // --- Zoom Factor
+        this.mapWindowIdToZoomFactor = new Map();
     }
-    let str = firstArg[0];
-    for (let i = 1; i < firstArg.length; i++) {
-      str += `{${i - 1}}` + firstArg[i];
+    static { this.INSTANCE = new WindowManager(); }
+    getZoomFactor(targetWindow) {
+        return this.mapWindowIdToZoomFactor.get(this.getWindowId(targetWindow)) ?? 1;
     }
-    return t(str, ...replacements);
-  } else {
-    message = firstArg.message;
-    key = message;
-    if (firstArg.comment && firstArg.comment.length > 0) {
-      key += `/${Array.isArray(firstArg.comment) ? firstArg.comment.join("") : firstArg.comment}`;
+    getWindowId(targetWindow) {
+        return targetWindow.vscodeWindowId;
     }
-    formatArgs = firstArg.args ?? {};
-  }
-  {
-    return format(message, formatArgs);
-  }
 }
-var _format2Regexp = /{([^}]+)}/g;
-function format(template, values) {
-  if (Object.keys(values).length === 0) {
-    return template;
-  }
-  return template.replace(_format2Regexp, (match, group) => values[group] ?? match);
+function addMatchMediaChangeListener(targetWindow, query, callback) {
+    if (typeof query === 'string') {
+        query = targetWindow.matchMedia(query);
+    }
+    query.addEventListener('change', callback);
+}
+/** The zoom scale for an index, e.g. 1, 1.2, 1.4 */
+function getZoomFactor(targetWindow) {
+    return WindowManager.INSTANCE.getZoomFactor(targetWindow);
+}
+const userAgent = navigator.userAgent;
+const isFirefox = (userAgent.indexOf('Firefox') >= 0);
+const isWebKit = (userAgent.indexOf('AppleWebKit') >= 0);
+const isChrome = (userAgent.indexOf('Chrome') >= 0);
+const isSafari = (!isChrome && (userAgent.indexOf('Safari') >= 0));
+const isWebkitWebView = (!isChrome && !isSafari && isWebKit);
+(userAgent.indexOf('Electron/') >= 0);
+const isAndroid = (userAgent.indexOf('Android') >= 0);
+let standalone = false;
+if (typeof mainWindow.matchMedia === 'function') {
+    const standaloneMatchMedia = mainWindow.matchMedia('(display-mode: standalone) or (display-mode: window-controls-overlay)');
+    const fullScreenMatchMedia = mainWindow.matchMedia('(display-mode: fullscreen)');
+    standalone = standaloneMatchMedia.matches;
+    addMatchMediaChangeListener(mainWindow, standaloneMatchMedia, ({ matches }) => {
+        // entering fullscreen would change standaloneMatchMedia.matches to false
+        // if standalone is true (running as PWA) and entering fullscreen, skip this change
+        if (standalone && fullScreenMatchMedia.matches) {
+            return;
+        }
+        // otherwise update standalone (browser to PWA or PWA to browser)
+        standalone = matches;
+    });
+}
+function getMonacoEnvironment() {
+    return globalThis.MonacoEnvironment;
 }
 
-export { t };
+export { addMatchMediaChangeListener, getMonacoEnvironment, getZoomFactor, isAndroid, isChrome, isFirefox, isSafari, isWebKit, isWebkitWebView };
