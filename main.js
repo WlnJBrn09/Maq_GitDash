@@ -1,93 +1,251 @@
-import { format as format$1 } from './impl/format.js';
-import { parse as parse$1, getNodePath as getNodePath$1, getNodeValue as getNodeValue$1, findNodeAtOffset as findNodeAtOffset$1 } from './impl/parser.js';
-import { createScanner as createScanner$1 } from './impl/scanner.js';
-
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-/**
- * Creates a JSON scanner on the given text.
- * If ignoreTrivia is set, whitespaces or comments are ignored.
- */
-const createScanner = createScanner$1;
-var ScanError;
-(function (ScanError) {
-    ScanError[ScanError["None"] = 0] = "None";
-    ScanError[ScanError["UnexpectedEndOfComment"] = 1] = "UnexpectedEndOfComment";
-    ScanError[ScanError["UnexpectedEndOfString"] = 2] = "UnexpectedEndOfString";
-    ScanError[ScanError["UnexpectedEndOfNumber"] = 3] = "UnexpectedEndOfNumber";
-    ScanError[ScanError["InvalidUnicode"] = 4] = "InvalidUnicode";
-    ScanError[ScanError["InvalidEscapeCharacter"] = 5] = "InvalidEscapeCharacter";
-    ScanError[ScanError["InvalidCharacter"] = 6] = "InvalidCharacter";
-})(ScanError || (ScanError = {}));
-var SyntaxKind;
-(function (SyntaxKind) {
-    SyntaxKind[SyntaxKind["OpenBraceToken"] = 1] = "OpenBraceToken";
-    SyntaxKind[SyntaxKind["CloseBraceToken"] = 2] = "CloseBraceToken";
-    SyntaxKind[SyntaxKind["OpenBracketToken"] = 3] = "OpenBracketToken";
-    SyntaxKind[SyntaxKind["CloseBracketToken"] = 4] = "CloseBracketToken";
-    SyntaxKind[SyntaxKind["CommaToken"] = 5] = "CommaToken";
-    SyntaxKind[SyntaxKind["ColonToken"] = 6] = "ColonToken";
-    SyntaxKind[SyntaxKind["NullKeyword"] = 7] = "NullKeyword";
-    SyntaxKind[SyntaxKind["TrueKeyword"] = 8] = "TrueKeyword";
-    SyntaxKind[SyntaxKind["FalseKeyword"] = 9] = "FalseKeyword";
-    SyntaxKind[SyntaxKind["StringLiteral"] = 10] = "StringLiteral";
-    SyntaxKind[SyntaxKind["NumericLiteral"] = 11] = "NumericLiteral";
-    SyntaxKind[SyntaxKind["LineCommentTrivia"] = 12] = "LineCommentTrivia";
-    SyntaxKind[SyntaxKind["BlockCommentTrivia"] = 13] = "BlockCommentTrivia";
-    SyntaxKind[SyntaxKind["LineBreakTrivia"] = 14] = "LineBreakTrivia";
-    SyntaxKind[SyntaxKind["Trivia"] = 15] = "Trivia";
-    SyntaxKind[SyntaxKind["Unknown"] = 16] = "Unknown";
-    SyntaxKind[SyntaxKind["EOF"] = 17] = "EOF";
-})(SyntaxKind || (SyntaxKind = {}));
-/**
- * Parses the given text and returns the object the JSON content represents. On invalid input, the parser tries to be as fault tolerant as possible, but still return a result.
- * Therefore, always check the errors list to find out if the input was valid.
- */
-const parse = parse$1;
-/**
- * Finds the innermost node at the given offset. If includeRightBound is set, also finds nodes that end at the given offset.
- */
-const findNodeAtOffset = findNodeAtOffset$1;
-/**
- * Gets the JSON path of the given JSON DOM node
- */
-const getNodePath = getNodePath$1;
-/**
- * Evaluates the JavaScript object of the given JSON DOM node
- */
-const getNodeValue = getNodeValue$1;
-var ParseErrorCode;
-(function (ParseErrorCode) {
-    ParseErrorCode[ParseErrorCode["InvalidSymbol"] = 1] = "InvalidSymbol";
-    ParseErrorCode[ParseErrorCode["InvalidNumberFormat"] = 2] = "InvalidNumberFormat";
-    ParseErrorCode[ParseErrorCode["PropertyNameExpected"] = 3] = "PropertyNameExpected";
-    ParseErrorCode[ParseErrorCode["ValueExpected"] = 4] = "ValueExpected";
-    ParseErrorCode[ParseErrorCode["ColonExpected"] = 5] = "ColonExpected";
-    ParseErrorCode[ParseErrorCode["CommaExpected"] = 6] = "CommaExpected";
-    ParseErrorCode[ParseErrorCode["CloseBraceExpected"] = 7] = "CloseBraceExpected";
-    ParseErrorCode[ParseErrorCode["CloseBracketExpected"] = 8] = "CloseBracketExpected";
-    ParseErrorCode[ParseErrorCode["EndOfFileExpected"] = 9] = "EndOfFileExpected";
-    ParseErrorCode[ParseErrorCode["InvalidCommentToken"] = 10] = "InvalidCommentToken";
-    ParseErrorCode[ParseErrorCode["UnexpectedEndOfComment"] = 11] = "UnexpectedEndOfComment";
-    ParseErrorCode[ParseErrorCode["UnexpectedEndOfString"] = 12] = "UnexpectedEndOfString";
-    ParseErrorCode[ParseErrorCode["UnexpectedEndOfNumber"] = 13] = "UnexpectedEndOfNumber";
-    ParseErrorCode[ParseErrorCode["InvalidUnicode"] = 14] = "InvalidUnicode";
-    ParseErrorCode[ParseErrorCode["InvalidEscapeCharacter"] = 15] = "InvalidEscapeCharacter";
-    ParseErrorCode[ParseErrorCode["InvalidCharacter"] = 16] = "InvalidCharacter";
-})(ParseErrorCode || (ParseErrorCode = {}));
-/**
- * Computes the edit operations needed to format a JSON document.
- *
- * @param documentText The input text
- * @param range The range to format or `undefined` to format the full content
- * @param options The formatting options
- * @returns The edit operations describing the formatting changes to the original document following the format described in {@linkcode EditResult}.
- * To apply the edit operations to the input, use {@linkcode applyEdits}.
- */
-function format(documentText, range, options) {
-    return format$1(documentText, range, options);
+/* --------------------------------------------------------------------------------------------
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for license information.
+ * ------------------------------------------------------------------------------------------ */
+class FullTextDocument {
+    constructor(uri, languageId, version, content) {
+        this._uri = uri;
+        this._languageId = languageId;
+        this._version = version;
+        this._content = content;
+        this._lineOffsets = undefined;
+    }
+    get uri() {
+        return this._uri;
+    }
+    get languageId() {
+        return this._languageId;
+    }
+    get version() {
+        return this._version;
+    }
+    getText(range) {
+        if (range) {
+            const start = this.offsetAt(range.start);
+            const end = this.offsetAt(range.end);
+            return this._content.substring(start, end);
+        }
+        return this._content;
+    }
+    update(changes, version) {
+        for (let change of changes) {
+            if (FullTextDocument.isIncremental(change)) {
+                // makes sure start is before end
+                const range = getWellformedRange(change.range);
+                // update content
+                const startOffset = this.offsetAt(range.start);
+                const endOffset = this.offsetAt(range.end);
+                this._content = this._content.substring(0, startOffset) + change.text + this._content.substring(endOffset, this._content.length);
+                // update the offsets
+                const startLine = Math.max(range.start.line, 0);
+                const endLine = Math.max(range.end.line, 0);
+                let lineOffsets = this._lineOffsets;
+                const addedLineOffsets = computeLineOffsets(change.text, false, startOffset);
+                if (endLine - startLine === addedLineOffsets.length) {
+                    for (let i = 0, len = addedLineOffsets.length; i < len; i++) {
+                        lineOffsets[i + startLine + 1] = addedLineOffsets[i];
+                    }
+                }
+                else {
+                    if (addedLineOffsets.length < 10000) {
+                        lineOffsets.splice(startLine + 1, endLine - startLine, ...addedLineOffsets);
+                    }
+                    else { // avoid too many arguments for splice
+                        this._lineOffsets = lineOffsets = lineOffsets.slice(0, startLine + 1).concat(addedLineOffsets, lineOffsets.slice(endLine + 1));
+                    }
+                }
+                const diff = change.text.length - (endOffset - startOffset);
+                if (diff !== 0) {
+                    for (let i = startLine + 1 + addedLineOffsets.length, len = lineOffsets.length; i < len; i++) {
+                        lineOffsets[i] = lineOffsets[i] + diff;
+                    }
+                }
+            }
+            else if (FullTextDocument.isFull(change)) {
+                this._content = change.text;
+                this._lineOffsets = undefined;
+            }
+            else {
+                throw new Error('Unknown change event received');
+            }
+        }
+        this._version = version;
+    }
+    getLineOffsets() {
+        if (this._lineOffsets === undefined) {
+            this._lineOffsets = computeLineOffsets(this._content, true);
+        }
+        return this._lineOffsets;
+    }
+    positionAt(offset) {
+        offset = Math.max(Math.min(offset, this._content.length), 0);
+        let lineOffsets = this.getLineOffsets();
+        let low = 0, high = lineOffsets.length;
+        if (high === 0) {
+            return { line: 0, character: offset };
+        }
+        while (low < high) {
+            let mid = Math.floor((low + high) / 2);
+            if (lineOffsets[mid] > offset) {
+                high = mid;
+            }
+            else {
+                low = mid + 1;
+            }
+        }
+        // low is the least x for which the line offset is larger than the current offset
+        // or array.length if no line offset is larger than the current offset
+        let line = low - 1;
+        return { line, character: offset - lineOffsets[line] };
+    }
+    offsetAt(position) {
+        let lineOffsets = this.getLineOffsets();
+        if (position.line >= lineOffsets.length) {
+            return this._content.length;
+        }
+        else if (position.line < 0) {
+            return 0;
+        }
+        let lineOffset = lineOffsets[position.line];
+        let nextLineOffset = (position.line + 1 < lineOffsets.length) ? lineOffsets[position.line + 1] : this._content.length;
+        return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
+    }
+    get lineCount() {
+        return this.getLineOffsets().length;
+    }
+    static isIncremental(event) {
+        let candidate = event;
+        return candidate !== undefined && candidate !== null &&
+            typeof candidate.text === 'string' && candidate.range !== undefined &&
+            (candidate.rangeLength === undefined || typeof candidate.rangeLength === 'number');
+    }
+    static isFull(event) {
+        let candidate = event;
+        return candidate !== undefined && candidate !== null &&
+            typeof candidate.text === 'string' && candidate.range === undefined && candidate.rangeLength === undefined;
+    }
+}
+var TextDocument;
+(function (TextDocument) {
+    /**
+     * Creates a new text document.
+     *
+     * @param uri The document's uri.
+     * @param languageId  The document's language Id.
+     * @param version The document's initial version number.
+     * @param content The document's content.
+     */
+    function create(uri, languageId, version, content) {
+        return new FullTextDocument(uri, languageId, version, content);
+    }
+    TextDocument.create = create;
+    /**
+     * Updates a TextDocument by modifying its content.
+     *
+     * @param document the document to update. Only documents created by TextDocument.create are valid inputs.
+     * @param changes the changes to apply to the document.
+     * @param version the changes version for the document.
+     * @returns The updated TextDocument. Note: That's the same document instance passed in as first parameter.
+     *
+     */
+    function update(document, changes, version) {
+        if (document instanceof FullTextDocument) {
+            document.update(changes, version);
+            return document;
+        }
+        else {
+            throw new Error('TextDocument.update: document must be created by TextDocument.create');
+        }
+    }
+    TextDocument.update = update;
+    function applyEdits(document, edits) {
+        let text = document.getText();
+        let sortedEdits = mergeSort(edits.map(getWellformedEdit), (a, b) => {
+            let diff = a.range.start.line - b.range.start.line;
+            if (diff === 0) {
+                return a.range.start.character - b.range.start.character;
+            }
+            return diff;
+        });
+        let lastModifiedOffset = 0;
+        const spans = [];
+        for (const e of sortedEdits) {
+            let startOffset = document.offsetAt(e.range.start);
+            if (startOffset < lastModifiedOffset) {
+                throw new Error('Overlapping edit');
+            }
+            else if (startOffset > lastModifiedOffset) {
+                spans.push(text.substring(lastModifiedOffset, startOffset));
+            }
+            if (e.newText.length) {
+                spans.push(e.newText);
+            }
+            lastModifiedOffset = document.offsetAt(e.range.end);
+        }
+        spans.push(text.substr(lastModifiedOffset));
+        return spans.join('');
+    }
+    TextDocument.applyEdits = applyEdits;
+})(TextDocument || (TextDocument = {}));
+function mergeSort(data, compare) {
+    if (data.length <= 1) {
+        // sorted
+        return data;
+    }
+    const p = (data.length / 2) | 0;
+    const left = data.slice(0, p);
+    const right = data.slice(p);
+    mergeSort(left, compare);
+    mergeSort(right, compare);
+    let leftIdx = 0;
+    let rightIdx = 0;
+    let i = 0;
+    while (leftIdx < left.length && rightIdx < right.length) {
+        let ret = compare(left[leftIdx], right[rightIdx]);
+        if (ret <= 0) {
+            // smaller_equal -> take left to preserve order
+            data[i++] = left[leftIdx++];
+        }
+        else {
+            // greater -> take right
+            data[i++] = right[rightIdx++];
+        }
+    }
+    while (leftIdx < left.length) {
+        data[i++] = left[leftIdx++];
+    }
+    while (rightIdx < right.length) {
+        data[i++] = right[rightIdx++];
+    }
+    return data;
+}
+function computeLineOffsets(text, isAtLineStart, textOffset = 0) {
+    const result = isAtLineStart ? [textOffset] : [];
+    for (let i = 0; i < text.length; i++) {
+        let ch = text.charCodeAt(i);
+        if (ch === 13 /* CharCode.CarriageReturn */ || ch === 10 /* CharCode.LineFeed */) {
+            if (ch === 13 /* CharCode.CarriageReturn */ && i + 1 < text.length && text.charCodeAt(i + 1) === 10 /* CharCode.LineFeed */) {
+                i++;
+            }
+            result.push(textOffset + i + 1);
+        }
+    }
+    return result;
+}
+function getWellformedRange(range) {
+    const start = range.start;
+    const end = range.end;
+    if (start.line > end.line || (start.line === end.line && start.character > end.character)) {
+        return { start: end, end: start };
+    }
+    return range;
+}
+function getWellformedEdit(textEdit) {
+    const range = getWellformedRange(textEdit.range);
+    if (range !== textEdit.range) {
+        return { newText: textEdit.newText, range };
+    }
+    return textEdit;
 }
 
-export { ParseErrorCode, ScanError, SyntaxKind, createScanner, findNodeAtOffset, format, getNodePath, getNodeValue, parse };
+export { TextDocument };
